@@ -62,12 +62,12 @@ class MainHandler(webapp.RequestHandler):
     # Otherwise ...
     else:
       # Find any matching users in the database
-      user_tokens = UserTokens.all(). \
-        filter('user =', users.get_current_user()). \
-        fetch(1)
+      user_id = user.user_id()
+      user_key = db.Key.from_path('UserTokens', user_id)
+      user_token = db.get(user_key)
 
       # If the user exists in database, redirect to /show
-      if user_tokens.count(1):
+      if user_token:
         self.redirect('/show')
 
       # Otherwise, start the process of OAuth
@@ -121,18 +121,18 @@ class ShowTables(webapp.RequestHandler):
   """ Shows the user's Fusion Tables """
   def get(self):
     # Find the current user in the database
-    user_tokens = UserTokens.all(). \
-      filter('user =', users.get_current_user()).\
-      fetch(1)
-    for user_token in user_tokens: pass
+    user = users.get_current_user()
+    user_id = user.user_id()
+    user_key = db.Key.from_path('UserTokens', user_id)
+    user_token = db.get(user_key)
 
     # Send a query to Fusion Tables
     response = self.send_query(user_token.access_token)
 
     # If a 401 is returned and not because the user doesn't have
     # permissions, then access token is refreshed
-    if response.status_code == "401" and \
-        not response.content.find("User does not have permission"):
+    if response.status_code == 401 and \
+        not response.content.find("User does not have permission") != -1:
  
       # Refresh access token
       access_token = self.refresh_token(user_token)

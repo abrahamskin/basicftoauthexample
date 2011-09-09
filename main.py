@@ -110,7 +110,8 @@ class OAuthCallback(webapp.RequestHandler):
     userTokens = UserTokens(
       user = user,
       access_token = access_token,
-      refresh_token = refresh_token)
+      refresh_token = refresh_token,
+      key_name = user.user_id())
     userTokens.put()
 
     # Redirect to /show page
@@ -120,28 +121,46 @@ class OAuthCallback(webapp.RequestHandler):
 class ShowTables(webapp.RequestHandler):
   """ Shows the user's Fusion Tables """
   def get(self):
-    # Find the current user in the database
+    # Find the current user
     user = users.get_current_user()
-    user_id = user.user_id()
-    user_key = db.Key.from_path('UserTokens', user_id)
-    user_token = db.get(user_key)
 
-    # Send a query to Fusion Tables
-    response = self.send_query(user_token.access_token)
+    # If the user has not logged in, redirect to login page
+    if not user:
+      self.redirect(users.create_login_url("/"))
 
-    # If a 401 is returned and not because the user doesn't have
-    # permissions, then access token is refreshed
-    if response.status_code == 401 and \
-        not response.content.find("User does not have permission") != -1:
- 
-      # Refresh access token
-      access_token = self.refresh_token(user_token)
+    else:
+      # Find the current user in the database
+      user_id = user.user_id()
+      user_key = db.Key.from_path('UserTokens', user_id)
+      user_token = db.get(user_key)
 
-      # Send request again
-      response = self.send_query(access_token)
+      # If the user doesn't exist in database, redirect to auth page
+      if not user_token:
+        self.redirect(
+          '%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=code' % \
+            ('https://accounts.google.com/o/oauth2/auth',
+            client_id,
+            redirect_uri,
+            'https://www.google.com/fusiontables/api/query')
+        )
 
-    # Write the response
-    self.response.out.write(response.content)
+      else:
+        # Send a query to Fusion Tables
+        response = self.send_query(user_token.access_token)
+
+        # If a 401 is returned and not because the user doesn't have
+        # permissions, then access token is refreshed
+        if response.status_code == 401 and \
+            not response.content.find("User does not have permission") != -1:
+
+          # Refresh access token
+          access_token = self.refresh_token(user_token)
+
+          # Send request again
+          response = self.send_query(access_token)
+
+        # Write the response
+        self.response.out.write(response.content)
 
   def send_query(self, access_token):
     """ Sends query to Fusion Tables to SHOW TABLES,

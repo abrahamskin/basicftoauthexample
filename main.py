@@ -169,7 +169,7 @@ class ShowTables(webapp.RequestHandler):
       url = 'https://www.google.com/fusiontables/api/query?%s' % \
         urllib.urlencode({
           'sql': 'SHOW TABLES',
-          'oauth_token': access_token
+          'access_token': access_token
         }),
       deadline = 10
     )

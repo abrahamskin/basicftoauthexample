@@ -77,7 +77,7 @@ class MainHandler(webapp.RequestHandler):
             ('https://accounts.google.com/o/oauth2/auth',
             client_id,
             redirect_uri,
-            'https://www.google.com/fusiontables/api/query')
+            'https://www.googleapis.com/auth/fusiontables')
         )
 
 
@@ -141,7 +141,7 @@ class ShowTables(webapp.RequestHandler):
             ('https://accounts.google.com/o/oauth2/auth',
             client_id,
             redirect_uri,
-            'https://www.google.com/fusiontables/api/query')
+            'https://www.googleapis.com/auth/fusiontables')
         )
 
       else:
